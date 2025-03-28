@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRF Test</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>CSRF Test Form</h1>
+        
+        <form method="post" action="{% url 'csrf_test' %}">
+            {% csrf_token %}
+            <input type="text" name="test_field" value="test value">
+            <button type="submit">Submit Test Form</button>
+        </form>
+        
+        <div style="margin-top: 20px;">
+            <h2>Debug Info:</h2>
+            <p>CSRF Cookie: {{ csrf_cookie }}</p>
+            <p>CSRF Token in Form: {{ csrf_token }}</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,269 @@
+{% load static %}
+{% load todo_extras %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow | Your Smart Task Manager</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2387/2387635.png" type="image/png">
+    <meta name="description" content="TaskFlow - A professional task management application to boost your productivity">
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            <h1><i class="fas fa-tasks"></i> TaskFlow</h1>
+            <p class="app-subtitle">Your Smart Task Manager</p>
+
+            <div class="header-actions">
+                <a class="logout-btn btn" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <div class="theme-toggle" onclick="toggleDarkMode()">
+                    <i class="fas fa-moon"></i> <span id="theme-text">Dark Mode</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-summary">
+            <div class="task-summary">
+                {% with task_count=tasks|default:""|length|default:0 %}
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">{{ task_count }}</span>
+                        <span class="stat-label">Total Tasks</span>
+                    </div>
+
+                    {% with completed_count=tasks|completed_count|default:0 %}
+                    <div class="stat-item">
+                        <span class="stat-value">{{ completed_count }}</span>
+                        <span class="stat-label">Completed</span>
+                    </div>
+
+                    <div class="stat-item">
+                        <span class="stat-value">{{ task_count|sub:completed_count }}</span>
+                        <span class="stat-label">Remaining</span>
+                    </div>
+                    {% endwith %}
+                </div>
+                {% endwith %}
+
+                <div class="current-date-display">
+                    <i class="fas fa-calendar-alt"></i> <span id="current-date"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="task-controls">
+            <form method="get" id="filter-form" class="controls-form">
+                <div class="filter-group">
+                    <label for="status"><i class="fas fa-filter"></i> Status</label>
+                    <select id="status" name="status" onchange="this.form.submit()" class="form-select">
+                        <option value="all" {% if filter_status == 'all' %}selected{% endif %}>All Tasks</option>
+                        <option value="active" {% if filter_status == 'active' %}selected{% endif %}>Active Only</option>
+                        <option value="completed" {% if filter_status == 'completed' %}selected{% endif %}>Completed</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="priority"><i class="fas fa-exclamation-circle"></i> Priority</label>
+                    <select id="priority" name="priority" onchange="this.form.submit()" class="form-select">
+                        <option value="all" {% if filter_priority == 'all' %}selected{% endif %}>All Priorities</option>
+                        <option value="high" {% if filter_priority == 'high' %}selected{% endif %}>High</option>
+                        <option value="medium" {% if filter_priority == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="low" {% if filter_priority == 'low' %}selected{% endif %}>Low</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="category"><i class="fas fa-tag"></i> Category</label>
+                    <select id="category" name="category" onchange="this.form.submit()" class="form-select">
+                        <option value="all" {% if filter_category == 'all' %}selected{% endif %}>All Categories</option>
+                        {% for cat_value, cat_name in categories %}
+                            <option value="{{ cat_value }}" {% if filter_category == cat_value %}selected{% endif %}>{{ cat_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="sort-group">
+                    <label for="sort"><i class="fas fa-sort"></i> Sort by</label>
+                    <select id="sort" name="sort" onchange="this.form.submit()" class="form-select">
+                        <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>Newest first</option>
+                        <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Oldest first</option>
+                        <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title (A-Z)</option>
+                        <option value="-title" {% if sort_by == '-title' %}selected{% endif %}>Title (Z-A)</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <div class="tasks-container">
+            <ul class="task-list">
+                {% for task in tasks %}
+                    <li class="task-card {% if task.completed %}completed{% endif %} {% if task.priority %}{{ task.priority }}-priority{% else %}medium-priority{% endif %}">
+                        <div class="task-header">
+                            <div class="task-title">
+                                {{ task.title }}
+                            </div>
+
+                            <div class="task-badges">
+                                <!-- Priority badge -->
+                                {% if not task.completed %}
+                                    {% if task.priority == 'high' %}
+                                        <span class="priority-badge priority-high"><i class="fas fa-arrow-up"></i> High</span>
+                                    {% elif task.priority == 'medium' %}
+                                        <span class="priority-badge priority-medium"><i class="fas fa-equals"></i> Medium</span>
+                                    {% elif task.priority == 'low' %}
+                                        <span class="priority-badge priority-low"><i class="fas fa-arrow-down"></i> Low</span>
+                                    {% endif %}
+                                {% endif %}
+
+                                <!-- Deadline badges -->
+                                {% if task.deadline %}
+                                    {% if task.completed %}
+                                        <!-- No deadline badge for completed tasks -->
+                                    {% elif task.deadline|date:'Y-m-d' < now|date:'Y-m-d' %}
+                                        <span class="priority-badge priority-high"><i class="fas fa-exclamation-circle"></i> Overdue</span>
+                                    {% elif task.deadline|date:'Y-m-d' == now|date:'Y-m-d' %}
+                                        <span class="priority-badge priority-medium"><i class="fas fa-clock"></i> Due Today</span>
+                                    {% endif %}
+                                {% endif %}
+
+                                <!-- Category badge -->
+                                {% if task.category %}
+                                    <span class="category-badge category-{{ task.category }}">
+                                        <i class="fas fa-tag"></i>
+                                        {% for cat_value, cat_name in categories %}
+                                            {% if cat_value == task.category %}{{ cat_name }}{% endif %}
+                                        {% endfor %}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="task-content">
+                            <div class="task-description">
+                                {% if task.description %}
+                                    {{ task.description }}
+                                {% else %}
+                                    <em>No description provided</em>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="task-footer">
+                            <div class="task-meta">
+                                <span class="meta-item"><i class="fas fa-calendar-alt"></i> Created: {{ task.created_at|date:"M d, Y" }}</span>
+
+                                {% if task.deadline %}
+                                    <span class="meta-item"><i class="fas fa-hourglass-end"></i> Due: {{ task.deadline|date:"M d, Y - h:i A" }}</span>
+                                {% else %}
+                                    <span class="meta-item"><i class="fas fa-infinity"></i> No deadline</span>
+                                {% endif %}
+
+                                {% if task.completed and task.completed_at %}
+                                    <span class="meta-item"><i class="fas fa-check-circle"></i> Completed: {{ task.completed_at|date:"M d, Y - h:i A" }}</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="task-actions">
+                                {% if not task.completed %}
+                                    <a class="complete-btn btn btn-success btn-sm" href="{% url 'mark_task_complete' task.id %}">
+                                        <i class="fas fa-check"></i> Complete
+                                    </a>
+                                {% else %}
+                                    <span class="completed-badge"><i class="fas fa-check-double"></i> Completed</span>
+                                {% endif %}
+                                <a class="delete-btn btn btn-danger btn-sm" href="{% url 'delete_task' task.id %}">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </a>
+                            </div>
+                        </div>
+                    </li>
+                {% empty %}
+                    <li class="no-tasks">
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-list fa-4x"></i>
+                            <h3>No Tasks Found</h3>
+                            <p>You don't have any tasks matching your current filters.</p>
+                            <p>Add your first task to get started!</p>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="action-bar">
+            <button class="add-task-btn btn btn-primary btn-lg" onclick="location.href='{% url 'add_task' %}'">
+                <i class="fas fa-plus-circle"></i> Add New Task
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Set current date in the header
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
+
+            // Initialize tooltips if needed
+            initializeTooltips();
+        });
+
+        // Dark mode toggle function
+        function toggleDarkMode() {
+            const body = document.body;
+            const themeText = document.getElementById('theme-text');
+            const themeIcon = document.querySelector('.theme-toggle i');
+
+            body.classList.toggle('dark-mode');
+
+            if (body.classList.contains('dark-mode')) {
+                themeText.textContent = 'Light Mode';
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                themeText.textContent = 'Dark Mode';
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+                localStorage.setItem('darkMode', 'disabled');
+            }
+        }
+
+        // Initialize tooltips
+        function initializeTooltips() {
+            const tooltipElements = document.querySelectorAll('[data-tooltip]');
+            tooltipElements.forEach(element => {
+                element.addEventListener('mouseenter', showTooltip);
+                element.addEventListener('mouseleave', hideTooltip);
+            });
+        }
+
+        function showTooltip(e) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            tooltip.textContent = this.getAttribute('data-tooltip');
+            document.body.appendChild(tooltip);
+
+            const rect = this.getBoundingClientRect();
+            tooltip.style.top = `${rect.top - tooltip.offsetHeight - 10}px`;
+            tooltip.style.left = `${rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)}px`;
+            tooltip.style.opacity = '1';
+        }
+
+        function hideTooltip() {
+            const tooltips = document.querySelectorAll('.tooltip');
+            tooltips.forEach(tooltip => tooltip.remove());
+        }
+
+        // Check for saved theme preference
+        document.addEventListener('DOMContentLoaded', function() {
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                toggleDarkMode();
+            }
+        });
+    </script>
+</body>
+</html>

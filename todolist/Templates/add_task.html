@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Task</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        input[type="text"], textarea, input[type="datetime-local"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, textarea:focus, input[type="datetime-local"]:focus, select:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        .priority-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .priority-option {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .priority-option.high {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+        .priority-option.medium {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+        .priority-option.low {
+            background-color: rgba(23, 162, 184, 0.1);
+            color: #17a2b8;
+        }
+        .priority-option.selected {
+            border-color: currentColor;
+            font-weight: bold;
+        }
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        .back-btn {
+            background: linear-gradient(to right, #6c757d, #868e96);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-plus-circle"></i> Add New Task</h1>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="title"><i class="fas fa-heading"></i> Task Title *</label>
+                <input type="text" id="title" name="title" required placeholder="Enter a clear, specific task title">
+            </div>
+            
+            <div class="form-group">
+                <label for="description"><i class="fas fa-align-left"></i> Description</label>
+                <textarea id="description" name="description" placeholder="Add details about your task (steps, resources needed, notes)"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="category"><i class="fas fa-tag"></i> Category</label>
+                <select id="category" name="category">
+                    <option value="">-- Select a category --</option>
+                    <option value="work">Work</option>
+                    <option value="personal">Personal</option>
+                    <option value="health">Health</option>
+                    <option value="education">Education</option>
+                    <option value="finance">Finance</option>
+                    <option value="home">Home</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-exclamation-circle"></i> Priority</label>
+                <div class="priority-selector">
+                    <div class="priority-option low" onclick="selectPriority('low')">
+                        <i class="fas fa-arrow-down"></i> Low
+                    </div>
+                    <div class="priority-option medium selected" onclick="selectPriority('medium')">
+                        <i class="fas fa-equals"></i> Medium
+                    </div>
+                    <div class="priority-option high" onclick="selectPriority('high')">
+                        <i class="fas fa-arrow-up"></i> High
+                    </div>
+                </div>
+                <input type="hidden" id="priority" name="priority" value="medium">
+            </div>
+            
+            <div class="form-group">
+                <label for="deadline"><i class="fas fa-calendar-alt"></i> Deadline</label>
+                <input type="datetime-local" id="deadline" name="deadline">
+            </div>
+            
+            <div class="form-actions">
+                <a href="{% url 'task_list' %}" class="back-btn btn"><i class="fas fa-arrow-left"></i> Back to List</a>
+                <button type="submit" class="add-task-btn"><i class="fas fa-save"></i> Save Task</button>
+            </div>
+        </form>
+    </div>
+    
+    <script>
+        function selectPriority(priority) {
+            // Remove selected class from all options
+            document.querySelectorAll('.priority-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            document.querySelector(`.priority-option.${priority}`).classList.add('selected');
+            
+            // Update hidden input value
+            document.getElementById('priority').value = priority;
+        }
+        
+        // Set default date to tomorrow
+        document.addEventListener('DOMContentLoaded', function() {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(23, 59);
+            
+            const dateString = tomorrow.toISOString().slice(0, 16);
+            document.getElementById('deadline').value = dateString;
+        });
+    </script>
+</body>
+</html>
